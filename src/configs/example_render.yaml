@@ -1,28 +1,13 @@
 %YAML 1.2
 ---
 name: realsense_dataloader
-type: 3d::dataloader
-out_caps: 3d/datamap
+type: ds3d::dataloader
+out_caps: ds3d/datamap
 custom_lib_path: libnvds_3d_dataloader_realsense.so
 custom_create_function: createRealsenseDataloader
 config_body:
   streams: [color, depth]
   framerate: 0
-
-# ---
-# name: depthsource
-# type: 3d::dataloader
-# out_caps: 3d/datamap, framerate=30/1
-# custom_lib_path: libnvds_3d_depth_datasource.so
-# custom_create_function: createDepthColorLoader
-# config_body:
-#   depth_source: depth_uint16_848x480.bin
-#   color_source: color_rgba_1920x1080.bin
-#   depth_scale: 0.0010 # to meters
-#   depth_datatype: uint16
-#   depth_size: [848, 480]
-#   color: rgba
-#   color_size: [1920, 1080]
 
 ---
 name: depth-render
@@ -50,5 +35,3 @@ config_body:
   name: debugdump
   type: ds3d::userapp
   enable_debug: False
-  #dump_depth: depth_uint16_848x480.bin
-  #dump_color: color_rgba_1920x1080.bin

@@ -114,7 +114,7 @@ set_target_properties(${PROJECT_NAME}_LIB PROPERTIES
         LINK_FLAGS "-Wl,--whole-archive"
 )
 target_include_directories(${PROJECT_NAME}_LIB PUBLIC ${PROJECT_MODULES_DIRECTORY})
-target_include_directories(${PROJECT_NAME}_LIB PUBLIC ${PROJECT_MODULES_DIRECTORY}/ds3d)
+target_include_directories(${PROJECT_NAME}_LIB PUBLIC ${PROJECT_MODULES_DIRECTORY}/3d)
 include(GNUInstallDirs)
 message(CMAKE_INSTALL_LIBDIR: ${CMAKE_INSTALL_LIBDIR})
 message(CMAKE_INSTALL_INCLUDEDIR: ${CMAKE_INSTALL_INCLUDEDIR})

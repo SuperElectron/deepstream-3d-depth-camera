@@ -1,17 +1,17 @@
 #include <cuda_runtime_api.h>
 #include "gstnvdsmeta.h"
 
-// include all ds3d hpp header files
-#include <ds3d/common/hpp/dataloader.hpp>
-#include <ds3d/common/hpp/datamap.hpp>
-#include <ds3d/common/hpp/frame.hpp>
-#include <ds3d/common/hpp/yaml_config.hpp>
-#include <ds3d/common/hpp/profiling.hpp>
+// include all 3d hpp header files
+#include <3d/common/hpp/dataloader.hpp>
+#include <3d/common/hpp/datamap.hpp>
+#include <3d/common/hpp/frame.hpp>
+#include <3d/common/hpp/yaml_config.hpp>
+#include <3d/common/hpp/profiling.hpp>
 
-// INCLUDE nvds3d Gst header files
-#include <ds3d/gst/nvds3d_gst_plugin.h>
-#include <ds3d/gst/nvds3d_gst_ptr.h>
-#include <ds3d/gst/nvds3d_meta.h>
+// include nvds3d Gst header files
+#include <3d/gst/nvds3d_gst_plugin.h>
+#include <3d/gst/nvds3d_gst_ptr.h>
+#include <3d/gst/nvds3d_meta.h>
 #include <unistd.h>
 
 #include "deepstream_3d_context.hpp"
@@ -94,11 +94,13 @@ class DepthCameraApp : public app::Ds3dAppContext {
 public:
     DepthCameraApp() = default;
 
+    // clears pipeline, bus, and all elements in context vector
     ~DepthCameraApp() { deinit(); }
+
 
     ErrCode initUserAppProfiling(const config::ComponentConfig &config) {
         auto initP = [this, &config]() { return _appProfiler.initProfiling(config); };
-        DS3D_ERROR_RETURN(config::CatchYamlCall(initP), "parse ds3d::userapp failed");
+        DS3D_ERROR_RETURN(config::CatchYamlCall(initP), "parse 3d::userapp failed");
         return ErrCode::kGood;
     }
 
