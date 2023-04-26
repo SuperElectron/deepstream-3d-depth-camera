@@ -1,0 +1,12 @@
+autoconf
+automake
+libtool
+gcc
+g++
+build-essential
+ninja-build
+v4l-utils
+pkg-config
+uuid-dev
+glib-2.0
+libyaml-cpp-dev

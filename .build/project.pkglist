@@ -1,0 +1,11 @@
+apt-utils
+gcc
+g++
+git
+ca-certificates
+curl
+gnupg
+lsb-release
+python3
+python3-pip
+lsb-core
