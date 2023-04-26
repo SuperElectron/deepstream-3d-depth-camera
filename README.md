@@ -255,9 +255,15 @@ datamap.getData(kDepth2ColorExtrinsics, d2cExtrinsics);
 <a name="Reference"></a>
 ## Reference
 
+- Read the [Deepstream sdk DS_3D_Depth_Camera](https://docs.nvidia.com/metropolis/deepstream/6.2/dev-guide/text/DS_3D_Depth_Camera.html) 
+docs for information on how to configure and use the SDK 
 
-[sdk docs](https://docs.nvidia.com/metropolis/deepstream/6.2/dev-guide/text/DS_3D_Depth_Camera.html)
+- Read the [Deepstream api docs](https://docs.nvidia.com/metropolis/deepstream-nvaie30/sdk-api/namespaceds3d.html)
+docs for more information about the ds3D namespace and how to use it
 
-[api docs](https://docs.nvidia.com/metropolis/deepstream-nvaie30/sdk-api/namespaceds3d.html)
+- read the [visual programming interface](https://docs.nvidia.com/vpi/algo_stereo_disparity.html) 
+docs for how to app custom computer vision into the repo
 
-[visual programming interface](https://docs.nvidia.com/vpi/algo_stereo_disparity.html)
+- read the [DS_3D_Custom_Manual](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_3D_Custom_Manual.html) docs
+for how to implement an AI model using this set up
+

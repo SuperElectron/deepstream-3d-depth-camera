@@ -5,7 +5,8 @@
 using namespace ds3d;
 
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     gst::DataLoaderSrc loaderSrc;
     gst::DataRenderSink renderSink;
     std::string configPath;
@@ -73,11 +74,13 @@ int main(int argc, char *argv[]) {
     bool startRenderDirectly = true;
     CHECK_ERROR(
             isGood(CreateLoaderSource(configTable, loaderSrc, startLoaderDirectly)),
-            "create dataloader source failed");
+            "create dataloader source failed"
+    );
 
     CHECK_ERROR(
             isGood(CreateRenderSink(configTable, renderSink, startRenderDirectly)),
-            "create datarender sink failed");
+            "create datarender sink failed"
+    );
 
     appCtx->setDataloaderSrc(loaderSrc);
     appCtx->setDataRenderSink(renderSink);
@@ -112,15 +115,13 @@ int main(int argc, char *argv[]) {
     });
     CHECK_ERROR(isGood(code), "Link pipeline elements failed");
 
-    /* Add probe to get informed of the meta data generated, we add probe to
-     * gstappsrc src pad of the dataloader */
+    /* Add probe to get informed of the meta data generated, we add probe to gstappsrc src pad of the dataloader */
     gst::PadPtr srcPad = loaderSrc.gstElement.staticPad("src");
     CHECK_ERROR(srcPad, "appsrc src pad is not detected.");
     srcPad.addProbe(GST_PAD_PROBE_TYPE_BUFFER, appsrcBufferProbe, appCtx.get(), NULL);
     srcPad.reset();
 
-    /* Add probe to get informed of the meta data generated, we add probe to
-     * gstappsink sink pad of the datrender */
+    /* Add probe to get informed of the meta data generated, we add probe to gstappsink sink pad of the datrender */
     if (renderSink.gstElement) {
         gst::PadPtr sinkPad = renderSink.gstElement.staticPad("sink");
         CHECK_ERROR(sinkPad, "appsink sink pad is not detected.");
