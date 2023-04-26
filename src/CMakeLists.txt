@@ -72,20 +72,14 @@ set_target_properties(${PROJECT_NAME}_LIB PROPERTIES POSITION_INDEPENDENT_CODE O
 set_target_properties(${PROJECT_NAME}_LIB PROPERTIES LINKER_LANGUAGE CXX)
 
 set(SRC_FILE main.cpp)
-add_executable(${PROJECT_NAME} ${SRC_FILE} ${HEADER_FILE})
+add_executable(${PROJECT_NAME} ${SRC_FILE})
 
-# create the library and add all headers to it
-# include this module's directory so other modules can find it
-target_include_directories(${PROJECT_NAME}_LIB PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        )
+################################################
+# Build sub-modules
+################################################
 
-file(GLOB APPLICATION_HEADERS
-        ${CMAKE_CURRENT_SOURCE_DIR}/*.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp)
-
-# create the library
-target_sources(${PROJECT_NAME}_LIB PUBLIC ${APPLICATION_HEADERS})
+add_subdirectory(modules/application)
+add_subdirectory(modules/3d)
 
 ################################################
 # Include libraries base cmakes for all modules
@@ -114,7 +108,7 @@ set_target_properties(${PROJECT_NAME}_LIB PROPERTIES
         LINK_FLAGS "-Wl,--whole-archive"
 )
 target_include_directories(${PROJECT_NAME}_LIB PUBLIC ${PROJECT_MODULES_DIRECTORY})
-target_include_directories(${PROJECT_NAME}_LIB PUBLIC ${PROJECT_MODULES_DIRECTORY}/ds3d)
+#target_include_directories(${PROJECT_NAME}_LIB PUBLIC ${PROJECT_MODULES_DIRECTORY}/3d)
 include(GNUInstallDirs)
 message(CMAKE_INSTALL_LIBDIR: ${CMAKE_INSTALL_LIBDIR})
 message(CMAKE_INSTALL_INCLUDEDIR: ${CMAKE_INSTALL_INCLUDEDIR})
