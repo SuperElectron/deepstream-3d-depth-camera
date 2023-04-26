@@ -57,14 +57,14 @@ a)  [ds_3d_realsense_depth_capture_render.yaml](./src/configs/ds_3d_realsense_de
 -   From depth and color images capture to 2D rendering pipeline
 
 
-![2D render](2d_render.png) 
+![2D render](docs/2d_render.png) 
 
 b) [ds_3d_realsense_depth_to_point_cloud.yaml](./src/configs/ds_3d_realsense_depth_to_point_cloud.yaml)
 
 - From depth and color images capture, 3D points/color conversions, to 3D point-cloud rendering pipeline
 
 
-![3D PointCloud](3d_pointcloud.png)
+![3D PointCloud](docs/3d_pointcloud.png)
 
 __2. Config Files Explained__
 

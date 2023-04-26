@@ -77,4 +77,4 @@ dist
 **/bin
 
 # Project specifics
-docs
+docs/html
