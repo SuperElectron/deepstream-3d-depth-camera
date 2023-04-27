@@ -1,6 +1,8 @@
 //#include <cuda_runtime_api.h>
 #include <unistd.h>
 #include "camera.hpp"
+#include "application.h"
+
 
 using namespace ds3d;
 
