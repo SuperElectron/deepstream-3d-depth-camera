@@ -16,21 +16,24 @@ public:
         return ErrCode::kGood;
     }
 
-    //
+    // configure action for appsrc (type: ds3d::dataloader from yaml)
     void setDataloaderSrc(gst::DataLoaderSrc src) {
         DS_ASSERT(src.gstElement);
         add(src.gstElement);
         _dataloaderSrc = std::move(src);
     }
 
+    // configure action for appsink (type: ds3d::datarender from yaml)
     void setDataRenderSink(gst::DataRenderSink sink) {
         DS_ASSERT(sink.gstElement);
         add(sink.gstElement);
         _datarenderSink = std::move(sink);
     }
 
+    // configure action for FPS, timing, FileReader (ingest data) and FileWriter (dump data)
     AppProfiler &profiler() { return _appProfiler; }
 
+    // stop pipeline and action objects for their elements
     ErrCode stop() {
         if (_dataloaderSrc.customProcessor) {
             _dataloaderSrc.customProcessor.stop();
@@ -47,6 +50,7 @@ public:
         return c;
     }
 
+    // stop and clear all object memory
     void deinit() override {
         ds3d::app::Ds3dAppContext::deinit();
         _datarenderSink.customlib.reset();
@@ -54,6 +58,7 @@ public:
     }
 
 private:
+    // callback function to read Gstreamer's bus messages from application and elements
     bool busCall(GstMessage *msg) final {
         DS_ASSERT(mainLoop());
         switch (GST_MESSAGE_TYPE(msg)) {
@@ -81,12 +86,22 @@ private:
     }
 
 private:
+    // placeholders for yaml file configurations (appsrc, appsink, and callback functions)
     gst::DataLoaderSrc _dataloaderSrc;
     gst::DataRenderSink _datarenderSink;
     AppProfiler _appProfiler;
 };
 
-static GstPadProbeReturn appsrcBufferProbe(GstPad *pad, GstPadProbeInfo *info, gpointer udata) {
+/**
+ * @brief callback on appsrc (yaml config type: ds3d::dataloader) to process queued data on the pad
+ *
+ * @param pad the pad on which the callback was placed on
+ * @param info data passed into the callback  (a wrapped GST_BUFFER for GstPadProbeCallback)
+ * @param udata custom user defined data (unused)
+ * @return GstPadProbeReturn to manage data and signals sent downstream into the pipeline (push data, fail signal, ...)
+ *  @ref: (https://gstreamer.freedesktop.org/documentation/gstreamer/gstpad.html?gi-language=c#GstPadProbeReturn)
+ */
+static GstPadProbeReturn appsrcBufferProbe(GstPad *pad, GstPadProbeInfo *, gpointer udata) {
     DepthCameraApp *appCtx = (DepthCameraApp *) udata;
     GstBuffer *buf = (GstBuffer *) info->data;
     ErrCode c = ErrCode::kGood;
@@ -158,20 +173,33 @@ static GstPadProbeReturn appsrcBufferProbe(GstPad *pad, GstPadProbeInfo *info, g
     return GST_PAD_PROBE_OK;
 }
 
-static GstPadProbeReturn appsinkBufferProbe(GstPad *pad, GstPadProbeInfo *info, gpointer udata) {
+/**
+ * @brief callback on appsink (yaml config type: ds3d::datarender) to process queued data on the pad
+ *
+ * @param pad the pad on which the callback was placed on
+ * @param info data passed into the callback  (a wrapped GST_BUFFER for GstPadProbeCallback)
+ * @param udata custom user defined data (unused)
+ * @return GstPadProbeReturn to manage data and signals sent downstream into the pipeline (push data, fail signal, ...)
+ *  @ref: (https://gstreamer.freedesktop.org/documentation/gstreamer/gstpad.html?gi-language=c#GstPadProbeReturn)
+ */
+static GstPadProbeReturn appsinkBufferProbe(GstPad *pad, GstPadProbeInfo *info, gpointer udata)
+{
     DepthCameraApp *appCtx = (DepthCameraApp *) udata;
     GstBuffer *buf = (GstBuffer *) info->data;
 
     DS_ASSERT(appCtx);
     AppProfiler &profiler = appCtx->profiler();
 
-    if (!NvDs3D_IsDs3DBuf(buf)) {
+    if (!NvDs3D_IsDs3DBuf(buf))
+    {
         LOG_WARNING("appsink buffer is not DS3D buffer");
     }
     const abiRefDataMap *refDataMap = nullptr;
-    if (!isGood(NvDs3D_Find1stDataMap(buf, refDataMap))) {
+    if (!isGood(NvDs3D_Find1stDataMap(buf, refDataMap)))
+    {
         LOG_ERROR("didn't find datamap from GstBuffer, need to stop");
-        if (appCtx->isRunning(5000)) {
+        if (appCtx->isRunning(5000))
+        {
             appCtx->sendEOS();
         }
         return GST_PAD_PROBE_DROP;
@@ -183,9 +211,10 @@ static GstPadProbeReturn appsinkBufferProbe(GstPad *pad, GstPadProbeInfo *info, 
     DS_ASSERT(dataMap);
 
     FrameGuard pointFrame;
-    if (dataMap.hasData(kPointXYZ)) {
+    if (dataMap.hasData(kPointXYZ))
+    {
         DS3D_FAILED_RETURN(
-                isGood(dataMap.getGuardData(kPointXYZ, pointFrame)),
+                isGood(dataMap.getGuardData (kPointXYZ, pointFrame)),
                 GST_PAD_PROBE_DROP,
                 "get pointXYZ frame failed."
         );
@@ -199,9 +228,10 @@ static GstPadProbeReturn appsinkBufferProbe(GstPad *pad, GstPadProbeInfo *info, 
     }
 
     FrameGuard colorCoord;
-    if (dataMap.hasData(kPointCoordUV)) {
+    if (dataMap.hasData(kPointCoordUV))
+    {
         DS3D_FAILED_RETURN(
-                isGood(dataMap.getGuardData(kPointCoordUV, colorCoord)),
+                isGood(dataMap.getGuardData (kPointCoordUV, colorCoord)),
                 GST_PAD_PROBE_DROP,
                 "get PointCoordUV frame failed."
         );
@@ -217,33 +247,34 @@ static GstPadProbeReturn appsinkBufferProbe(GstPad *pad, GstPadProbeInfo *info, 
     IntrinsicsParam depthIntrinsics;
     IntrinsicsParam colorIntrinsics;
     ExtrinsicsParam d2cExtrinsics;  // rotation matrix is in the column-major order
-    if (dataMap.hasData(kDepthIntrinsics)) {
+    if (dataMap.hasData(kDepthIntrinsics))
+    {
         DS3D_FAILED_RETURN(
-                isGood(dataMap.getData(kDepthIntrinsics, depthIntrinsics)),
+                isGood(dataMap.getData (kDepthIntrinsics, depthIntrinsics)),
                 GST_PAD_PROBE_DROP,
                 "get depth intrinsic parameters failed."
         );
         LOG_DEBUG("DepthIntrinsics parameters is found, fx: %.4f, fy: %.4f", depthIntrinsics.fx, depthIntrinsics.fy);
     }
-    if (dataMap.hasData(kColorIntrinsics)) {
+    if (dataMap.hasData(kColorIntrinsics))
+    {
         DS3D_FAILED_RETURN(
-                isGood(dataMap.getData(kColorIntrinsics, colorIntrinsics)),
+                isGood(dataMap.getData (kColorIntrinsics, colorIntrinsics)),
                 GST_PAD_PROBE_DROP,
                 "get color intrinsic parameters failed."
         );
-        LOG_DEBUG(
-                "ColorIntrinsics parameters is found, fx: %.4f, fy: %.4f", colorIntrinsics.fx,
-                colorIntrinsics.fy);
+        LOG_DEBUG("ColorIntrinsics parameters is found, fx: %.4f, fy: %.4f", colorIntrinsics.fx, colorIntrinsics.fy);
     }
-    if (dataMap.hasData(kDepth2ColorExtrinsics)) {
+    if (dataMap.hasData(kDepth2ColorExtrinsics))
+    {
         DS3D_FAILED_RETURN(
-                isGood(dataMap.getData(kDepth2ColorExtrinsics, d2cExtrinsics)),
+                isGood(dataMap.getData (kDepth2ColorExtrinsics, d2cExtrinsics)),
                 GST_PAD_PROBE_DROP,
                 "get depth2color extrinsic parameters failed."
         );
-        LOG_DEBUG(
-                "depth2color extrinsic parameters is found, t:[%.3f, %.3f, %3.f]",
-                d2cExtrinsics.translation.x, d2cExtrinsics.translation.y, d2cExtrinsics.translation.z);
+        LOG_DEBUG("depth2color extrinsic parameters is found, t:[%.3f, %.3f, %3.f]",
+                  d2cExtrinsics.translation.x, d2cExtrinsics.translation.y, d2cExtrinsics.translation.z
+        );
     }
 
     // dump depth data for debug
@@ -264,17 +295,23 @@ static std::weak_ptr <DepthCameraApp> gAppCtx;
 void static WindowClosed() {
     LOG_DEBUG("Window closed.");
     auto appCtx = gAppCtx.lock();
-    if (!appCtx) {
+
+    if (!appCtx)
+    {
         return;
     }
-    if (appCtx->isRunning(5000)) {
+
+    if (appCtx->isRunning(5000))
+    {
         appCtx->sendEOS();
-    } else {
+    } else
+    {
         appCtx->quitMainLoop();
     }
 }
 
-static void help(const char *bin) {
+static void help(const char *bin)
+{
     printf("Usage: %s -c <deepstream-3d-depth-camera-config.txt>\n", bin);
 }
 
@@ -282,17 +319,22 @@ static void help(const char *bin) {
  * Function to handle program interrupt signal.
  * It installs default handler after handling the interrupt.
  */
-static void _intr_handler(int signum) {
+static void _intr_handler(int signum)
+{
     LOG_INFO("User Interrupted..");
 
     ShrdPtr <DepthCameraApp> appCtx = gAppCtx.lock();
-    if (appCtx) {
-        if (appCtx->isRunning()) {
+    if (appCtx)
+    {
+        if (appCtx->isRunning())
+        {
             appCtx->sendEOS();
-        } else {
+        } else
+        {
             appCtx->quitMainLoop();
         }
-    } else {
+    } else
+    {
         LOG_ERROR("program terminated.");
         std::terminate();
     }
@@ -301,7 +343,8 @@ static void _intr_handler(int signum) {
 /**
  * Function to install custom handler for program interrupt signal.
  */
-static void _intr_setup(void) {
+static void _intr_setup(void)
+{
     struct sigaction action;
     memset(&action, 0, sizeof(action));
     action.sa_handler = _intr_handler;
@@ -320,18 +363,25 @@ using ConfigList = std::vector<config::ComponentConfig>;
  * Function to create dataloader source.
  */
 static ErrCode CreateLoaderSource(
-        std::map <config::ComponentType, ConfigList> &configTable, gst::DataLoaderSrc &loaderSrc, bool startLoader) {
+        std::map <config::ComponentType,
+        ConfigList> &configTable,
+        gst::DataLoaderSrc &loaderSrc,
+        bool startLoader)
+        {
     // Check whether dataloader is configured
     DS3D_FAILED_RETURN(
-            configTable.count(config::ComponentType::kDataLoader), ErrCode::kConfig,
-            "config file doesn't have dataloader types");
+            configTable.count(config::ComponentType::kDataLoader),
+            ErrCode::kConfig,
+            "config file doesn't have dataloader types"
+    );
     DS_ASSERT(configTable[config::ComponentType::kDataLoader].size() == 1);
     config::ComponentConfig &srcConfig = configTable[config::ComponentType::kDataLoader][0];
 
     // creat appsrc and dataloader
     DS3D_ERROR_RETURN(
             NvDs3D_CreateDataLoaderSrc(srcConfig, loaderSrc, startLoader),
-            "Create appsrc and dataloader failed");
+            "Create appsrc and dataloader failed"
+    );
     DS_ASSERT(loaderSrc.gstElement);
     DS_ASSERT(loaderSrc.customProcessor);
 
@@ -342,10 +392,15 @@ static ErrCode CreateLoaderSource(
  * Function to create datarender sink.
  */
 static ErrCode CreateRenderSink(
-        std::map <config::ComponentType, ConfigList> &configTable, gst::DataRenderSink &renderSink,
-        bool startRender) {
+        std::map <config::ComponentType,
+        ConfigList> &configTable,
+        gst::DataRenderSink &renderSink,
+        bool startRender)
+    {
+
     // Check whether datarender is configured
-    if (configTable.find(config::ComponentType::kDataRender) == configTable.end()) {
+    if (configTable.find(config::ComponentType::kDataRender) == configTable.end())
+    {
         LOG_INFO("config file does not have datarender component, using fakesink instead");
         renderSink.gstElement = gst::elementMake("fakesink", "fakesink");
         DS_ASSERT(renderSink.gstElement);
@@ -353,7 +408,8 @@ static ErrCode CreateRenderSink(
     }
 
     DS3D_FAILED_RETURN(
-            configTable[config::ComponentType::kDataRender].size() == 1, ErrCode::kConfig,
+            configTable[config::ComponentType::kDataRender].size() == 1,
+            ErrCode::kConfig,
             "multiple datarender component found, please update and keep 1 render only"
     );
 
