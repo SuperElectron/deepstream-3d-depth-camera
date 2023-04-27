@@ -116,7 +116,7 @@ private:
  * @return GstPadProbeReturn to manage data and signals sent downstream into the pipeline (push data, fail signal, ...)
  *  @ref: (https://gstreamer.freedesktop.org/documentation/gstreamer/gstpad.html?gi-language=c#GstPadProbeReturn)
  */
-static GstPadProbeReturn appsrcBufferProbe(GstPad *pad, GstPadProbeInfo *, gpointer udata)
+static GstPadProbeReturn appsrcBufferProbe(GstPad *pad, GstPadProbeInfo *info, gpointer udata)
 {
     DepthCameraApp *appCtx = (DepthCameraApp *) udata;
     GstBuffer *buf = (GstBuffer *) info->data;
