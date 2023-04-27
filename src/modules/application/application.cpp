@@ -1,111 +1,94 @@
 #include "application.h"
 
-/**
- * @brief clears all objects to avoid memory leaks
- */
-DepthCameraApp::~DepthCameraApp() { deinit(); }
+using namespace myApp;
+
+
+Application::Application(){};
+Application::~Application(){};
 
 /**
- * @brief parse fields from config file (3dDs::userapp)
- * @param config `struct ComponentConfig` from 3d::common::config.h that holds memory types for yaml field entries
- * @return ErrCode for flow handling
+ * @brief display usage message when user tries to run the program wrong
+ * @param path location of callable executable
  */
-ErrCode DepthCameraApp::initUserAppProfiling(const config::ComponentConfig &config)
+void Application::help(const char *path)
 {
-    auto initP = [this, &config]() {
-        return _appProfiler.initProfiling(config);
-    };
-    DS3D_ERROR_RETURN(config::CatchYamlCall(initP), "parse 3dDs::userapp failed");
-    return ErrCode::kGood;
-}
+    printf("Usage: %s -c <deepstream-3d-depth-camera-config.yaml>\n", path);
+    printf("Usage: %s -c /src/configs/example_render.yaml \n", path);
+};
+
 
 /**
- * @brief configure action for appsrc (type: ds3d::dataloader from yaml)
- * @param src pass ownership of the gstreamer element to the application layer (from header instantiation)
- */
-void DepthCameraApp::setDataloaderSrc(gst::DataLoaderSrc src)
-{
-    DS_ASSERT(src.gstElement);
-    add(src.gstElement);
-    _dataloaderSrc = std::move(src);
-}
-
-/**
- * @brief configure action for appsink (type: ds3d::datarender from yaml)
- * @param sink pass ownership of the gstreamer element to the application layer (from header instantiation)
- */
-void DepthCameraApp::setDataRenderSink(gst::DataRenderSink sink)
-{
-    DS_ASSERT(sink.gstElement);
-    add(sink.gstElement);
-    _datarenderSink = std::move(sink);
-}
-
-/**
- * @brief stop pipeline and action objects for their elements
- * @return ErrCode for flow handling
- */
-ErrCode DepthCameraApp::stop()
-{
-    if (_dataloaderSrc.customProcessor)
-    {
-        _dataloaderSrc.customProcessor.stop();
-        _dataloaderSrc.gstElement.reset();
-        _dataloaderSrc.customProcessor.reset();
-    }
-
-    if (_datarenderSink.customProcessor)
-    {
-        _datarenderSink.customProcessor.stop();
-        _datarenderSink.gstElement.reset();
-        _datarenderSink.customProcessor.reset();
-    }
-    ErrCode c = ds3d::app::Ds3dAppContext::stop();
-    return c;
-}
-
-/**
- * @brief stop and clear all object memory
+ * @brief Function to create dataloader source.
  *
+ * @param configTable
+ * @param loaderSrc
+ * @param startLoader
+ * @return ErrCode for flow handling
  */
-void DepthCameraApp::deinit()
+ErrCode Application::CreateLoaderSource(
+        std::map <config::ComponentType,
+        ConfigList> &configTable,
+        gst::DataLoaderSrc &loaderSrc,
+        bool startLoader)
 {
-    ds3d::app::Ds3dAppContext::deinit();
-    _datarenderSink.customlib.reset();
-    _dataloaderSrc.customlib.reset();
-}
+    // Check whether dataloader is configured
+    DS3D_FAILED_RETURN(
+            configTable.count(config::ComponentType::kDataLoader),
+            ErrCode::kConfig,
+            "config file doesn't have dataloader types"
+    );
+    DS_ASSERT(configTable[config::ComponentType::kDataLoader].size() == 1);
+    config::ComponentConfig &srcConfig = configTable[config::ComponentType::kDataLoader][0];
 
+    // creat appsrc and dataloader
+    DS3D_ERROR_RETURN(
+            NvDs3D_CreateDataLoaderSrc(srcConfig, loaderSrc, startLoader),
+            "Create appsrc and dataloader failed"
+    );
+    DS_ASSERT(loaderSrc.gstElement);
+    DS_ASSERT(loaderSrc.customProcessor);
+
+    return ErrCode::kGood;
+};
 
 /**
- * @brief callback function to read Gstreamer's bus messages from application and elements
- * @param msg the message passed to the bus from the gstreamer application layer
- * @return bool : true if successful (mandatory return for bus_call); otherwise critical error and stops application
+ * @brief Function to create datarender sink.
+ * @param configTable
+ * @param renderSink
+ * @param startRender
+ * @return for flow handling
  */
-bool DepthCameraApp::busCall(GstMessage *msg)
+ErrCode Application::CreateRenderSink(
+        std::map <config::ComponentType,
+        ConfigList> &configTable,
+        gst::DataRenderSink &renderSink,
+        bool startRender)
 {
-    DS_ASSERT(mainLoop());
-    switch (GST_MESSAGE_TYPE(msg))
-    {
-        case GST_MESSAGE_EOS:
-            LOG_INFO("End of stream\n");
-            quitMainLoop();
-            break;
-        case GST_MESSAGE_ERROR:
-        {
-            gchar *debug = nullptr;
-            GError *error = nullptr;
-            gst_message_parse_error(msg, &error, &debug);
-            g_printerr("ERROR from element %s: %s\n", GST_OBJECT_NAME(msg->src), error->message);
-            if (debug)
-                g_printerr("Error details: %s\n", debug);
-            g_free(debug);
-            g_error_free(error);
 
-            quitMainLoop();
-            break;
-        }
-        default:
-            break;
+    // Check whether datarender is configured
+    if (configTable.find(config::ComponentType::kDataRender) == configTable.end())
+    {
+        LOG_INFO("config file does not have datarender component, using fakesink instead");
+        renderSink.gstElement = gst::elementMake("fakesink", "fakesink");
+        DS_ASSERT(renderSink.gstElement);
+        return ErrCode::kGood;
     }
-    return TRUE;
-}
+
+    DS3D_FAILED_RETURN(
+            configTable[config::ComponentType::kDataRender].size() == 1,
+            ErrCode::kConfig,
+            "multiple datarender component found, please update and keep 1 render only"
+    );
+
+    config::ComponentConfig &sinkConfig = configTable[config::ComponentType::kDataRender][0];
+
+    // creat appsink and datarender
+    DS3D_ERROR_RETURN(
+            NvDs3D_CreateDataRenderSink(sinkConfig, renderSink, startRender),
+            "Create appsink and datarender failed"
+    );
+    DS_ASSERT(renderSink.gstElement);
+    DS_ASSERT(renderSink.customProcessor);
+
+    return ErrCode::kGood;
+};

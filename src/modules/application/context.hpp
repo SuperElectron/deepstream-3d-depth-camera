@@ -1,5 +1,4 @@
-#ifndef DS3D_APP_DEEPSTREAM_3D_CONTEXT_APP_H
-#define DS3D_APP_DEEPSTREAM_3D_CONTEXT_APP_H
+#pragma once
 
 #include "gstnvdsmeta.h"
 
@@ -326,5 +325,3 @@ namespace ds3d {
 
     }
 }  // namespace 3d::app
-
-#endif  // DS3D_APP_DEEPSTREAM_3D_CONTEXT_APP_H
