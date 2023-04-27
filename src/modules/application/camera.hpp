@@ -10,38 +10,49 @@ public:
     ~DepthCameraApp() { deinit(); }
 
     // parse fields from config file (3dDs::userapp)
-    ErrCode initUserAppProfiling(const config::ComponentConfig &config) {
-        auto initP = [this, &config]() { return _appProfiler.initProfiling(config); };
+    ErrCode initUserAppProfiling(const config::ComponentConfig &config)
+    {
+        auto initP = [this, &config]() {
+            return _appProfiler.initProfiling(config);
+        };
         DS3D_ERROR_RETURN(config::CatchYamlCall(initP), "parse 3dDs::userapp failed");
         return ErrCode::kGood;
     }
 
     // configure action for appsrc (type: ds3d::dataloader from yaml)
-    void setDataloaderSrc(gst::DataLoaderSrc src) {
+    void setDataloaderSrc(gst::DataLoaderSrc src)
+    {
         DS_ASSERT(src.gstElement);
         add(src.gstElement);
         _dataloaderSrc = std::move(src);
     }
 
     // configure action for appsink (type: ds3d::datarender from yaml)
-    void setDataRenderSink(gst::DataRenderSink sink) {
+    void setDataRenderSink(gst::DataRenderSink sink)
+    {
         DS_ASSERT(sink.gstElement);
         add(sink.gstElement);
         _datarenderSink = std::move(sink);
     }
 
     // configure action for FPS, timing, FileReader (ingest data) and FileWriter (dump data)
-    AppProfiler &profiler() { return _appProfiler; }
+    AppProfiler &profiler()
+    {
+        return _appProfiler;
+    }
 
     // stop pipeline and action objects for their elements
-    ErrCode stop() {
-        if (_dataloaderSrc.customProcessor) {
+    ErrCode stop()
+    {
+        if (_dataloaderSrc.customProcessor)
+        {
             _dataloaderSrc.customProcessor.stop();
             _dataloaderSrc.gstElement.reset();
             _dataloaderSrc.customProcessor.reset();
         }
 
-        if (_datarenderSink.customProcessor) {
+        if (_datarenderSink.customProcessor)
+        {
             _datarenderSink.customProcessor.stop();
             _datarenderSink.gstElement.reset();
             _datarenderSink.customProcessor.reset();
@@ -51,7 +62,8 @@ public:
     }
 
     // stop and clear all object memory
-    void deinit() override {
+    void deinit() override
+    {
         ds3d::app::Ds3dAppContext::deinit();
         _datarenderSink.customlib.reset();
         _dataloaderSrc.customlib.reset();
@@ -59,14 +71,17 @@ public:
 
 private:
     // callback function to read Gstreamer's bus messages from application and elements
-    bool busCall(GstMessage *msg) final {
+    bool busCall(GstMessage *msg) final
+    {
         DS_ASSERT(mainLoop());
-        switch (GST_MESSAGE_TYPE(msg)) {
+        switch (GST_MESSAGE_TYPE(msg))
+        {
             case GST_MESSAGE_EOS:
                 LOG_INFO("End of stream\n");
                 quitMainLoop();
                 break;
-            case GST_MESSAGE_ERROR: {
+            case GST_MESSAGE_ERROR:
+            {
                 gchar *debug = nullptr;
                 GError *error = nullptr;
                 gst_message_parse_error(msg, &error, &debug);
@@ -101,7 +116,8 @@ private:
  * @return GstPadProbeReturn to manage data and signals sent downstream into the pipeline (push data, fail signal, ...)
  *  @ref: (https://gstreamer.freedesktop.org/documentation/gstreamer/gstpad.html?gi-language=c#GstPadProbeReturn)
  */
-static GstPadProbeReturn appsrcBufferProbe(GstPad *pad, GstPadProbeInfo *, gpointer udata) {
+static GstPadProbeReturn appsrcBufferProbe(GstPad *pad, GstPadProbeInfo *, gpointer udata)
+{
     DepthCameraApp *appCtx = (DepthCameraApp *) udata;
     GstBuffer *buf = (GstBuffer *) info->data;
     ErrCode c = ErrCode::kGood;
@@ -114,9 +130,11 @@ static GstPadProbeReturn appsrcBufferProbe(GstPad *pad, GstPadProbeInfo *, gpoin
         LOG_WARNING("appsrc buffer is not DS3D buffer");
     }
     const abiRefDataMap *refDataMap = nullptr;
-    if (!isGood(NvDs3D_Find1stDataMap(buf, refDataMap))) {
+    if (!isGood(NvDs3D_Find1stDataMap(buf, refDataMap)))
+    {
         LOG_ERROR("didn't find datamap from GstBuffer, need to stop");
-        if (appCtx->isRunning(5000)) {
+        if (appCtx->isRunning(5000))
+        {
             appCtx->sendEOS();
         }
         return GST_PAD_PROBE_DROP;
@@ -126,9 +144,10 @@ static GstPadProbeReturn appsrcBufferProbe(GstPad *pad, GstPadProbeInfo *, gpoin
     GuardDataMap dataMap(*refDataMap);
     DS_ASSERT(dataMap);
     Frame2DGuard depthFrame;
-    if (dataMap.hasData(kDepthFrame)) {
+    if (dataMap.hasData(kDepthFrame))
+    {
         DS3D_FAILED_RETURN(
-                isGood(dataMap.getGuardData(kDepthFrame, depthFrame)),
+                isGood(dataMap.getGuardData (kDepthFrame, depthFrame)),
                 GST_PAD_PROBE_DROP,
                 "get depthFrame failed"
         );
@@ -142,9 +161,10 @@ static GstPadProbeReturn appsrcBufferProbe(GstPad *pad, GstPadProbeInfo *, gpoin
     }
 
     Frame2DGuard colorFrame;
-    if (dataMap.hasData(kColorFrame)) {
+    if (dataMap.hasData(kColorFrame))
+    {
         DS3D_FAILED_RETURN(
-                isGood(dataMap.getGuardData(kColorFrame, colorFrame)),
+                isGood(dataMap.getGuardData (kColorFrame, colorFrame)),
                 GST_PAD_PROBE_DROP,
                 "get color Frame failed"
         );
@@ -155,18 +175,20 @@ static GstPadProbeReturn appsrcBufferProbe(GstPad *pad, GstPadProbeInfo *, gpoin
     }
 
     // dump depth data for debug
-    if (depthFrame && profiler.depthWriter.isOpen()) {
+    if (depthFrame && profiler.depthWriter.isOpen())
+    {
         DS_ASSERT(depthFrame->memType() != MemType::kGpuCuda);
         DS3D_FAILED_RETURN(
-                profiler.depthWriter.write((const uint8_t *) depthFrame->base(), depthFrame->bytes()),
+                profiler.depthWriter.write ((const uint8_t *) depthFrame->base(), depthFrame->bytes()),
                 GST_PAD_PROBE_DROP, "Dump depth data failed");
     }
 
     // dump color data for debug
-    if (colorFrame && profiler.colorWriter.isOpen()) {
+    if (colorFrame && profiler.colorWriter.isOpen())
+    {
         DS_ASSERT(colorFrame->memType() != MemType::kGpuCuda);
         DS3D_FAILED_RETURN(
-                profiler.colorWriter.write((const uint8_t *) colorFrame->base(), colorFrame->bytes()),
+                profiler.colorWriter.write ((const uint8_t *) colorFrame->base(), colorFrame->bytes()),
                 GST_PAD_PROBE_DROP, "Dump color data failed");
     }
 
