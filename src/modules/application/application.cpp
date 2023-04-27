@@ -4,7 +4,9 @@ using namespace myApp;
 
 
 Application::Application(){};
+
 Application::~Application(){};
+
 
 /**
  * @brief display usage message when user tries to run the program wrong

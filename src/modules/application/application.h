@@ -4,7 +4,6 @@
 #include "context.hpp"
 #include "camera.h"
 
-
 #undef CHECK_ERROR
 #define CHECK_ERROR(statement, fmt, ...) DS3D_FAILED_RETURN(statement, -1, fmt, ##__VA_ARGS__)
 
@@ -84,6 +83,7 @@ class Application
 {
 public:
     Application();
+
 //    void WindowClosed();
     void help(const char *bin);
     void intr_handler(int signum);
