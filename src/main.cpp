@@ -1,8 +1,9 @@
-//#include <cuda_runtime_api.h>
 #include <unistd.h>
-#include "camera.hpp"
+#include "application.h"
+#include "callbacks.hpp"
 
 using namespace ds3d;
+using namespace myApp;
 
 
 int main(int argc, char *argv[])
@@ -15,8 +16,9 @@ int main(int argc, char *argv[])
     /* Standard GStreamer initialization */
     gst_init(&argc, &argv);
 
-    /* setup signal handler */
-    _intr_setup();
+    myApp::Application runtimeApp;
+
+    intr_setup();
 
     /* Parse program arguments */
     opterr = 0;
@@ -27,18 +29,19 @@ int main(int argc, char *argv[])
                 configPath = optarg;
                 break;
             case 'h':
-                help(argv[0]);
+
+                runtimeApp.help(argv[0]);
                 return 0;
             case '?':
             default:
-                help(argv[0]);
+                runtimeApp.help(argv[0]);
                 return -1;
         }
     }
     // if no argument or incorrect arguments passed, display how to call the binary
     if (configPath.empty()) {
         LOG_ERROR("config file is not set!");
-        help(argv[0]);
+        runtimeApp.help(argv[0]);
         return -1;
     }
     CHECK_ERROR(readFile(configPath, configContent), "read file: %s failed", configPath.c_str());
@@ -73,12 +76,12 @@ int main(int argc, char *argv[])
     bool startLoaderDirectly = true;
     bool startRenderDirectly = true;
     CHECK_ERROR(
-            isGood(CreateLoaderSource(configTable, loaderSrc, startLoaderDirectly)),
+            isGood(runtimeApp.CreateLoaderSource(configTable, loaderSrc, startLoaderDirectly)),
             "create dataloader source failed"
     );
 
     CHECK_ERROR(
-            isGood(CreateRenderSink(configTable, renderSink, startRenderDirectly)),
+            isGood(runtimeApp.CreateRenderSink(configTable, renderSink, startRenderDirectly)),
             "create datarender sink failed"
     );
 
